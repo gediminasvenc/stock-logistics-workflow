@@ -30,6 +30,13 @@ class StockMove(models.Model):
             move.picking_id._reset_sequence()
         return move
 
+    def _action_confirm(self, merge=True, merge_into=False):
+        res = super(StockMove, self)._action_confirm(merge=merge, merge_into=merge_into)
+        if not self.env.context.get("keep_line_sequence", False):
+            for move in res:
+                move.picking_id._reset_sequence()
+        return res
+
 
 class StockMoveLine(models.Model):
     _inherit = "stock.move.line"
@@ -82,7 +89,8 @@ class StockPicking(models.Model):
     def _reset_sequence(self):
         for rec in self:
             current_sequence = 1
-            for line in rec.move_ids_without_package:
+            # we do not take into account new_iD records, only real ones
+            for line in rec.move_ids_without_package.filtered(lambda x: isinstance(x.id, int)):
                 line.sequence = current_sequence
                 current_sequence += 1
 
